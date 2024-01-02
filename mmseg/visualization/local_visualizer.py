@@ -158,6 +158,7 @@ class SegLocalVisualizer(Visualizer):
             else:
                 masks = sem_seg[0] == labels[:, None, None]
             masks = masks.astype(np.uint8)
+            mask = mask.copy()
             for mask_num in range(len(labels)):
                 classes_id = labels[mask_num]
                 classes_color = colors[mask_num]
