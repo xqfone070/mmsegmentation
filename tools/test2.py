@@ -15,7 +15,7 @@ def parse_args():
         description='MMSeg test (and eval) a model')
     parser.add_argument(
         'work_dir', help=('Path of config file, checkpoint file and save dir'))
-    parser.add_argument('checkpoint', help='checkpoint file')
+    parser.add_argument('--checkpoint', default='best', help='checkpoint file')
     parser.add_argument(
         '--out',
         type=str,
