@@ -1,7 +1,6 @@
 import os
 import time
 
-
 _base_ = [
     '../../configs/_base_/models/deeplabv3plus_r50-d8.py',
     '../../configs/_base_/datasets/pascal_voc12.py',
@@ -13,7 +12,7 @@ _base_ = [
 model_name = 'deeplabv3plus_r50'
 
 # train config
-batch_size = 4
+batch_size = 8
 max_iters = 20000
 val_interval = int(max_iters * 0.1)
 lr_base = 0.01
@@ -35,11 +34,12 @@ data_preprocessor = dict(
     type='SegDataPreProcessor',
     mean=[0., 0., 0.],
     std=[255., 255., 255.],
+    # 不做通道颜色变换，因为灰度图
     bgr_to_rgb=False,
-    # 会将结果尺寸pad到该尺寸
-    size=img_scale)
-num_classes = 3
+    # preprocess不做尺寸缩放或padding
+    size=img_scale[::-1])
 
+num_classes = 3
 
 # train
 time_str = time.strftime('%Y%m%d_%H%M%S', time.localtime(time.time()))
@@ -53,8 +53,16 @@ work_dir = os.path.join('work_dirs', dataset_name, run_name)
 # model
 model = dict(
     data_preprocessor=data_preprocessor,
-    decode_head=dict(num_classes=num_classes),
-    auxiliary_head=dict(num_classes=num_classes))
+    decode_head=dict(
+        num_classes=num_classes,
+        loss_decode=dict(
+            type='CrossEntropyLoss', use_sigmoid=False, class_weight=[1.0, 1.0, 8.0], loss_weight=1.0)
+    ),
+    auxiliary_head=dict(
+        num_classes=num_classes,
+        loss_decode=dict(
+            type='CrossEntropyLoss', use_sigmoid=False, class_weight=[1.0, 1.0, 8.0], loss_weight=0.4)
+    ))
 
 # dataset
 train_pipeline = [
@@ -96,7 +104,7 @@ val_dataloader = dict(
         pipeline=test_pipeline)
 )
 
-test_dataloader = val_dataloader = dict(
+test_dataloader = dict(
     dataset=dict(
         type=dataset_type,
         data_root=data_root,
