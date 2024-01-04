@@ -13,8 +13,9 @@ model_name = 'deeplabv3plus_r50'
 
 # train config
 batch_size = 8
-max_iters = 20000
-val_interval = int(max_iters * 0.1)
+max_iters = 80000
+# val_interval = int(max_iters * 0.1)
+val_interval = 1000
 lr_base = 0.01
 
 # dataset config
@@ -56,12 +57,14 @@ model = dict(
     decode_head=dict(
         num_classes=num_classes,
         loss_decode=dict(
-            type='CrossEntropyLoss', use_sigmoid=False, class_weight=[1.0, 1.0, 8.0], loss_weight=1.0)
+            # type='CrossEntropyLoss', use_sigmoid=False, class_weight=[1.0, 1.0, 8.0], loss_weight=1.0)
+            type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0)
     ),
     auxiliary_head=dict(
         num_classes=num_classes,
         loss_decode=dict(
-            type='CrossEntropyLoss', use_sigmoid=False, class_weight=[1.0, 1.0, 8.0], loss_weight=0.4)
+            # type='CrossEntropyLoss', use_sigmoid=False, class_weight=[1.0, 1.0, 8.0], loss_weight=0.4)
+            type='CrossEntropyLoss', use_sigmoid=False, loss_weight=0.4)
     ))
 
 # dataset
@@ -119,6 +122,7 @@ test_evaluator = val_evaluator
 
 # optimizer
 optimizer = dict(type='SGD', lr=lr_base, momentum=0.9, weight_decay=0.0005)
+optim_wrapper = dict(optimizer=optimizer)
 
 # learning policy
 param_scheduler = [
