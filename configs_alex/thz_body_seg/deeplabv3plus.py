@@ -13,7 +13,7 @@ model_name = 'deeplabv3plus_r50'
 
 # train config
 batch_size = 8
-max_iters = 80000
+max_iters = 40000
 # val_interval = int(max_iters * 0.1)
 val_interval = 1000
 lr_base = 0.01
@@ -30,7 +30,11 @@ val_ann_file = os.path.join(set_subdir, 'val.txt')
 test_ann_file = os.path.join(set_subdir, 'test.txt')
 
 # model config
+# 训练的尺度
 img_scale = (256, 512)
+# 注意crop的shape是(h, w)，不是(w, h)
+crop_size = img_scale[::-1]
+
 data_preprocessor = dict(
     type='SegDataPreProcessor',
     mean=[0., 0., 0.],
@@ -38,7 +42,8 @@ data_preprocessor = dict(
     # 不做通道颜色变换，因为灰度图
     bgr_to_rgb=False,
     # preprocess不做尺寸缩放或padding
-    size=img_scale[::-1])
+    size=crop_size
+)
 
 num_classes = 3
 
@@ -56,26 +61,48 @@ model = dict(
     data_preprocessor=data_preprocessor,
     decode_head=dict(
         num_classes=num_classes,
-        loss_decode=dict(
-            # type='CrossEntropyLoss', use_sigmoid=False, class_weight=[1.0, 1.0, 8.0], loss_weight=1.0)
-            type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0)
+        loss_decode=dict(type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0),
+        # weighted CrossEntropyLoss
+        # loss_decode=dict(type='CrossEntropyLoss', use_sigmoid=False, class_weight=[1.0, 1.0, 8.0], loss_weight=1.0),
+        # Dice Loss
+        # loss_decode=[
+        #     dict(type='CrossEntropyLoss', loss_name='loss_ce', loss_weight=1.0),
+        #     dict(type='DiceLoss', loss_name='loss_dice', loss_weight=3.0)
+        # ]
     ),
     auxiliary_head=dict(
         num_classes=num_classes,
-        loss_decode=dict(
-            # type='CrossEntropyLoss', use_sigmoid=False, class_weight=[1.0, 1.0, 8.0], loss_weight=0.4)
-            type='CrossEntropyLoss', use_sigmoid=False, loss_weight=0.4)
-    ))
+        loss_decode=dict(type='CrossEntropyLoss', use_sigmoid=False, loss_weight=0.4),
+        # weighted CrossEntropyLoss
+        # loss_decode=dict(type='CrossEntropyLoss', use_sigmoid=False, class_weight=[1.0, 1.0, 8.0], loss_weight=0.4)
+        # Dice Loss
+        # loss_decode=[
+        #     dict(type='CrossEntropyLoss', loss_name='loss_ce', loss_weight=1.0),
+        #     dict(type='DiceLoss', loss_name='loss_dice', loss_weight=3.0)
+        # ]
+    )
+)
 
 # dataset
 train_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(type='LoadAnnotations'),
-    dict(type='Resize', scale=img_scale, keep_ratio=True),
+    # dict(type='Resize', scale=img_scale, keep_ratio=True),
+    dict(
+        type='RandomResize',
+        scale=img_scale,
+        ratio_range=(0.5, 2.0),
+        keep_ratio=True),
+    dict(type='RandomCrop', crop_size=crop_size, cat_max_ratio=1.0),
     dict(type='RandomFlip', prob=0.5),
-    # dict(type='PhotoMetricDistortion'),
+    # dict(type='PhotoMetricDistortion',
+    #      brightness_delta=8,
+    #      contrast_range=(0.8, 1.2),
+    #      saturation_range=(0.8, 1.2),
+    #      hue_delta=9),
     dict(type='PackSegInputs')
 ]
+
 test_pipeline = [
     dict(type='LoadImageFromFile'),
     dict(type='Resize', scale=img_scale, keep_ratio=True),
@@ -148,5 +175,5 @@ visualizer = dict(vis_backends=[
 default_hooks = dict(
     checkpoint=dict(
         type='CheckpointHook', by_epoch=False, interval=val_interval,
-        save_best='mIoU')
+        save_best='mIoU', max_keep_ckpts=10)
 )
