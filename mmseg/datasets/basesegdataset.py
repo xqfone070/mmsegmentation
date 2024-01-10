@@ -270,6 +270,23 @@ class BaseSegDataset(BaseDataset):
             data_list = sorted(data_list, key=lambda x: x['img_path'])
         return data_list
 
+    def get_cat_ids(self, idx: int) -> List[int]:
+        """Get COCO category ids by index.
+
+        Args:
+            idx (int): Index of data.
+
+        Returns:
+            List[int]: All categories in the image of specified index.
+        """
+        data_info = self.get_data_info(idx)
+        from mmseg.datasets.transforms import LoadAnnotations
+        loader = LoadAnnotations()
+        data_info = loader(data_info)
+        seg = data_info['gt_seg_map']
+        s = set(seg.flatten())
+        return s
+
 
 @DATASETS.register_module()
 class BaseCDDataset(BaseDataset):

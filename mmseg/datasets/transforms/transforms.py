@@ -335,6 +335,46 @@ class RandomCrop(BaseTransform):
     def __repr__(self):
         return self.__class__.__name__ + f'(crop_size={self.crop_size})'
 
+@TRANSFORMS.register_module()
+class RandomCropAlex(RandomCrop):
+    """Random crop the image & seg.
+        specific_class: specific class should be contained in cropped image
+        prob: prob of contained
+    """
+
+    def __init__(self,
+                 specific_class: int,
+                 contained_min_ratio: float = 0.5,
+                 prob: float = 0.5,
+                 *args, **kwargs
+                 ):
+        super().__init__(*args, **kwargs)
+        assert 0.0 <= prob <= 1.0
+        self.specific_class = specific_class
+        self.contained_min_ratio = contained_min_ratio
+        self.prob = prob
+
+    @cache_randomness
+    def crop_bbox(self, results: dict) -> tuple:
+        spec_class_num = np.count_nonzero(results['gt_seg_map'] == self.specific_class)
+        crop_bbox = super().crop_bbox(results)
+
+        rand_val = np.random.rand()
+        if spec_class_num > 0 and rand_val < self.prob:
+            # Repeat 10 times
+            for _ in range(10):
+                seg_temp = self.crop(results['gt_seg_map'], crop_bbox)
+                crop_spec_class_num = np.count_nonzero(seg_temp == self.specific_class)
+                contained_ratio = crop_spec_class_num / spec_class_num
+                if contained_ratio > self.contained_min_ratio:
+                    break
+
+                crop_bbox = super().crop_bbox(results)
+
+        return crop_bbox
+
+
+
 
 @TRANSFORMS.register_module()
 class RandomRotate(BaseTransform):

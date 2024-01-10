@@ -12,11 +12,11 @@ _base_ = [
 model_name = 'deeplabv3plus_r50'
 
 # train config
-batch_size = 8
-max_iters = 40000
+batch_size = 16
+max_iters = 20000
 # val_interval = int(max_iters * 0.1)
 val_interval = 1000
-lr_base = 0.01
+lr_base = 0.005
 
 # dataset config
 dataset_type = 'PascalVOCDataset'
@@ -33,7 +33,8 @@ test_ann_file = os.path.join(set_subdir, 'test.txt')
 # 训练的尺度
 img_scale = (256, 512)
 # 注意crop的shape是(h, w)，不是(w, h)
-crop_size = img_scale[::-1]
+# crop_size = img_scale[::-1]
+crop_size = (256, 256)
 
 data_preprocessor = dict(
     type='SegDataPreProcessor',
@@ -93,13 +94,13 @@ train_pipeline = [
         scale=img_scale,
         ratio_range=(0.5, 2.0),
         keep_ratio=True),
-    dict(type='RandomCrop', crop_size=crop_size, cat_max_ratio=1.0),
+    dict(type='RandomCropAlex', specific_class=2, prob=0.8, crop_size=crop_size, cat_max_ratio=0.75),
     dict(type='RandomFlip', prob=0.5),
-    # dict(type='PhotoMetricDistortion',
-    #      brightness_delta=8,
-    #      contrast_range=(0.8, 1.2),
-    #      saturation_range=(0.8, 1.2),
-    #      hue_delta=9),
+    dict(type='PhotoMetricDistortion',
+         brightness_delta=8,
+         contrast_range=(0.8, 1.2),
+         saturation_range=(0.8, 1.2),
+         hue_delta=9),
     dict(type='PackSegInputs')
 ]
 
@@ -114,7 +115,7 @@ train_dataloader = dict(
     batch_size=batch_size,
     num_workers=4,
     persistent_workers=True,
-    sampler=dict(type='InfiniteSampler', shuffle=True),
+    sampler=dict(type='ClassBalanceInfiniteSampler', balance_classes=[2], ratio=0.7, shuffle=True),
     dataset=dict(
         type=dataset_type,
         data_root=data_root,
