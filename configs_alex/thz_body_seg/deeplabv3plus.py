@@ -13,7 +13,7 @@ model_name = 'deeplabv3plus_r50'
 
 # train config
 batch_size = 16
-max_iters = 20000
+max_iters = 40000
 # val_interval = int(max_iters * 0.1)
 val_interval = 1000
 lr_base = 0.005
@@ -62,25 +62,25 @@ model = dict(
     data_preprocessor=data_preprocessor,
     decode_head=dict(
         num_classes=num_classes,
-        loss_decode=dict(type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0),
+        # loss_decode=dict(type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0),
         # weighted CrossEntropyLoss
         # loss_decode=dict(type='CrossEntropyLoss', use_sigmoid=False, class_weight=[1.0, 1.0, 8.0], loss_weight=1.0),
         # Dice Loss
-        # loss_decode=[
-        #     dict(type='CrossEntropyLoss', loss_name='loss_ce', loss_weight=1.0),
-        #     dict(type='DiceLoss', loss_name='loss_dice', loss_weight=3.0)
-        # ]
+        loss_decode=[
+            dict(type='CrossEntropyLoss', loss_name='loss_ce', loss_weight=1.0),
+            dict(type='DiceLoss', loss_name='loss_dice', loss_weight=3.0)
+        ]
     ),
     auxiliary_head=dict(
         num_classes=num_classes,
-        loss_decode=dict(type='CrossEntropyLoss', use_sigmoid=False, loss_weight=0.4),
+        # loss_decode=dict(type='CrossEntropyLoss', use_sigmoid=False, loss_weight=0.4),
         # weighted CrossEntropyLoss
         # loss_decode=dict(type='CrossEntropyLoss', use_sigmoid=False, class_weight=[1.0, 1.0, 8.0], loss_weight=0.4)
         # Dice Loss
-        # loss_decode=[
-        #     dict(type='CrossEntropyLoss', loss_name='loss_ce', loss_weight=1.0),
-        #     dict(type='DiceLoss', loss_name='loss_dice', loss_weight=3.0)
-        # ]
+        loss_decode=[
+            dict(type='CrossEntropyLoss', loss_name='loss_ce', loss_weight=0.4),
+            dict(type='DiceLoss', loss_name='loss_dice', loss_weight=1.2)
+        ]
     )
 )
 
@@ -94,7 +94,8 @@ train_pipeline = [
         scale=img_scale,
         ratio_range=(0.5, 2.0),
         keep_ratio=True),
-    dict(type='RandomCropAlex', specific_class=2, prob=0.8, crop_size=crop_size, cat_max_ratio=0.75),
+    # dict(type='RandomCropAlex', specific_class=2, prob=0.8, crop_size=crop_size, cat_max_ratio=0.75),
+    dict(type='RandomCrop', crop_size=crop_size, cat_max_ratio=1.0),
     dict(type='RandomFlip', prob=0.5),
     dict(type='PhotoMetricDistortion',
          brightness_delta=8,
@@ -115,7 +116,8 @@ train_dataloader = dict(
     batch_size=batch_size,
     num_workers=4,
     persistent_workers=True,
-    sampler=dict(type='ClassBalanceInfiniteSampler', balance_classes=[2], ratio=0.7, shuffle=True),
+    sampler=dict(type='InfiniteSampler', shuffle=True),
+    # sampler=dict(type='ClassBalanceInfiniteSampler', balance_classes=[2], ratio=0.7, shuffle=True),
     dataset=dict(
         type=dataset_type,
         data_root=data_root,
