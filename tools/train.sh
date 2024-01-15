@@ -23,7 +23,7 @@ else
 fi
 
 
-config_file='configs_alex/thz_body_seg/deeplabv3plus.py'
+config_file='configs_alex/thz_body_seg/segmenter.py'
 echo "CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES"
 echo "gpu_num=$gpu_num"
 echo "dist_train=$dist_train"
